@@ -159,38 +159,5 @@ describe("providers", function()
       eq("function", type(Providers.CursorAgentProvider.make_request))
       eq("function", type(Providers.GeminiCLIProvider.make_request))
     end)
-
-    it("uses file response when present", function()
-      local res = Providers.BaseProvider:_resolve_response_text(
-        "from file",
-        "from stdout",
-        "from stderr"
-      )
-      eq("from file", res)
-    end)
-
-    it("falls back to stdout when file response is empty", function()
-      local res = Providers.BaseProvider:_resolve_response_text(
-        "   ",
-        "from stdout",
-        "from stderr"
-      )
-      eq("from stdout", res)
-    end)
-
-    it("falls back to stderr when file and stdout are empty", function()
-      local res = Providers.BaseProvider:_resolve_response_text(
-        "",
-        " \n ",
-        "from stderr"
-      )
-      eq("from stderr", res)
-    end)
-
-    it("returns empty response when all sources are empty", function()
-      local res =
-        Providers.BaseProvider:_resolve_response_text("", " \n ", "\n\t ")
-      eq("", res)
-    end)
   end)
 end)

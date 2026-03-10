@@ -23,23 +23,6 @@ end
 --- @field _get_default_model fun(): string
 local BaseProvider = {}
 
---- @param from_file string
---- @param from_stdout string
---- @param from_stderr string
---- @return string
-function BaseProvider:_resolve_response_text(from_file, from_stdout, from_stderr)
-  if vim.trim(from_file or "") ~= "" then
-    return from_file
-  end
-  if vim.trim(from_stdout or "") ~= "" then
-    return from_stdout
-  end
-  if vim.trim(from_stderr or "") ~= "" then
-    return from_stderr
-  end
-  return from_file or ""
-end
-
 --- @param callback fun(models: string[]|nil, err: string|nil): nil
 function BaseProvider.fetch_models(callback)
   callback(nil, "This provider does not support listing models")
@@ -78,8 +61,6 @@ function BaseProvider:make_request(query, context, observer)
 
   local logger = context.logger:set_area(self:_get_provider_name())
   logger:debug("make_request", "tmp_file", context.tmp_file)
-  local stdout_chunks = {}
-  local stderr_chunks = {}
 
   local once_complete = once(
     --- @param status "success" | "failed" | "cancelled"
@@ -106,7 +87,6 @@ function BaseProvider:make_request(query, context, observer)
           logger:debug("stdout#error", "err", err)
         end
         if not err and data then
-          table.insert(stdout_chunks, data)
           observer.on_stdout(data)
         end
       end),
@@ -120,9 +100,6 @@ function BaseProvider:make_request(query, context, observer)
           logger:debug("stderr#error", "err", err)
         end
         if not err then
-          if data then
-            table.insert(stderr_chunks, data)
-          end
           observer.on_stderr(data)
         end
       end),
@@ -146,22 +123,7 @@ function BaseProvider:make_request(query, context, observer)
         vim.schedule(function()
           local ok, res = self:_retrieve_response(context)
           if ok then
-            local stdout_res = table.concat(stdout_chunks, "")
-            local stderr_res = table.concat(stderr_chunks, "")
-            if vim.trim(stdout_res) == "" and vim.trim(obj.stdout or "") ~= "" then
-              stdout_res = obj.stdout
-            end
-            if vim.trim(stderr_res) == "" and vim.trim(obj.stderr or "") ~= "" then
-              stderr_res = obj.stderr
-            end
-            local final_res =
-              self:_resolve_response_text(res, stdout_res, stderr_res)
-            if vim.trim(res or "") == "" and vim.trim(final_res or "") ~= "" then
-              logger:debug(
-                "response file empty, using process output fallback"
-              )
-            end
-            once_complete("success", final_res)
+            once_complete("success", res)
           else
             once_complete(
               "failed",
